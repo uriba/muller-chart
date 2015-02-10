@@ -1,0 +1,16 @@
+Ancestor ={} 
+Ancestor['0-xylE'] = None
+Ancestor['0-topA'] = ['0-xylE']
+Ancestor['0-crp'] = ['0-topA']
+Ancestor['0-yjiY'] = ['0-crp']
+Ancestor['1-mlc+2'] = ['0-yjiY']
+Ancestor['1-malE'] = ['1-mlc+2']
+Ancestor['1-thrA+2'] = ['1-malE']
+Ancestor['1-prs+2'] = ['1-thrA+2']
+Ancestor['2-icd'] = ['0-yjiY']
+Ancestor['2-fli'] = ['2-icd']
+Ancestor['2-mlc'] = ['2-fli']
+Ancestor['2-prs+7'] = ['2-mlc']
+Ancestor['2-cbdA'] = ['2-prs+7']
+Ancestor['N-crp*'] = ['0-topA']
+Ancestor['N-xylA*'] = None

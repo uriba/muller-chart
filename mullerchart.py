@@ -138,6 +138,7 @@ fig = mpl.figure(figsize = (12,6))
 plt = fig.add_subplot(111)
 
 for node in pointabdc:
+    #handles = []
     for i in range(len(pointabdc[node][0])/2):
         coords = {'time':[],'ymin':[],'ymax':[]}
         for t in range(len(times)):
@@ -158,9 +159,10 @@ for node in pointabdc:
         softtimes = np.linspace(coords["time"][0],coords["time"][-1],100)
         softymin = spline(coords["time"],coords["ymin"],softtimes)
         softymax = spline(coords["time"],coords["ymax"],softtimes)
-        plt.fill_between(coords['time'],coords['ymin'],coords['ymax'],color=colors[node])
+        handle = plt.fill_between(coords['time'],coords['ymin'],coords['ymax'],color=colors[node],label=node)
         #plt.fill_between(softtimes,softymin,softymax,color=colors[node])
-        plt.set_ylim(0,1.5)
-        plt.set_xlim(2,20.5)
+    #handles.append(handle)
+    plt.set_ylim(0,1.5)
+    plt.set_xlim(2,20.5)
         
 mpl.savefig("muller-demo2.pdf")

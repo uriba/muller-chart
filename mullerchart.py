@@ -139,25 +139,27 @@ plt = fig.add_subplot(111)
 
 for node in pointabdc:
     for i in range(len(pointabdc[node][0])/2):
-        pts = []
-        pts2 = []
+        coords = {'time':[],'ymin':[],'ymax':[]}
         for t in range(len(times)):
-            pts.append(pointabdc[node][t][2*i])
-            pts2.append(pointabdc[node][t][2*i+1])
-            
-        softpts = spline(times,pts,softtimes)
-        softpts2 = spline(times,pts2,softtimes)
-        diffs = softpts2-softpts
-        realtimes = []
-        realpts = []
-        realpts2 = []
-        for t in range(len(softtimes)):
-            if diffs[t]>0.7: # a threshold to use to avoid the lines of every strain start from the beginning of time and end at the end of time
-                realtimes.append(softtimes[t])
-                realpts.append(softpts[t])
-                realpts2.append(softpts2[t])
-        plt.fill_between(times,pts,pts2,color=colors[node])
-        #plt.fill_between(softtimes,softpts,softpts2,color=colors[node])
+            ptmin = pointabdc[node][t][2*i]
+            ptmax = pointabdc[node][t][2*i+1]
+            if t == 0:
+                diffprev = 0
+            else:
+                diffprev = pointabdc[node][t-1][2*i+1] - pointabdc[node][t-1][2*i]
+            if t == len(times)-1:
+                diffnext = 0
+            else:
+                diffnext = pointabdc[node][t+1][2*i+1] - pointabdc[node][t+1][2*i]
+            if ptmax-ptmin+diffprev+diffnext > 0.005:
+                coords["time"].append(times[t])
+                coords["ymin"].append(ptmin)
+                coords["ymax"].append(ptmax)
+        softtimes = np.linspace(coords["time"][0],coords["time"][-1],100)
+        softymin = spline(coords["time"],coords["ymin"],softtimes)
+        softymax = spline(coords["time"],coords["ymax"],softtimes)
+        plt.fill_between(coords['time'],coords['ymin'],coords['ymax'],color=colors[node])
+        #plt.fill_between(softtimes,softymin,softymax,color=colors[node])
         plt.set_ylim(0,1.5)
         plt.set_xlim(2,20.5)
         

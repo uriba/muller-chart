@@ -1,4 +1,5 @@
 import matplotlib.pyplot as mpl
+import matplotlib.patches as pch
 import numpy as np
 from scipy.interpolate import spline
 import pandas as pd
@@ -38,7 +39,7 @@ print df
 #This dictionary states for each strain its decendants.
 hierarchy = {"WT":['0-xylE'],
             '0-xylE':['0-topA'],
-            '0-topA':['0-crp','N-xylA*'],
+            '0-topA':['N-xylA*','0-crp'],
             '0-crp':['0-yjiY','N-crp*'],
             '0-yjiY':['1-mlc+2','2-icd'],
             '1-mlc+2':['1-malE'],
@@ -136,9 +137,9 @@ colors = {"WT":"0.3",
 
 fig = mpl.figure(figsize = (12,6))
 plt = fig.add_subplot(111)
-
+handles = []
+labels = []
 for node in pointabdc:
-    #handles = []
     for i in range(len(pointabdc[node][0])/2):
         coords = {'time':[],'ymin':[],'ymax':[]}
         for t in range(len(times)):
@@ -157,12 +158,15 @@ for node in pointabdc:
                 coords["ymin"].append(ptmin)
                 coords["ymax"].append(ptmax)
         softtimes = np.linspace(coords["time"][0],coords["time"][-1],100)
-        softymin = spline(coords["time"],coords["ymin"],softtimes)
-        softymax = spline(coords["time"],coords["ymax"],softtimes)
-        handle = plt.fill_between(coords['time'],coords['ymin'],coords['ymax'],color=colors[node],label=node)
+        softymin = spline(coords["time"],coords["ymin"],softtimes,order=3)
+        softymax = spline(coords["time"],coords["ymax"],softtimes,order=3)
+        plt.fill_between(coords['time'],coords['ymin'],coords['ymax'],color=colors[node],label=node)
         #plt.fill_between(softtimes,softymin,softymax,color=colors[node])
-    #handles.append(handle)
-    plt.set_ylim(0,1.5)
-    plt.set_xlim(2,20.5)
+    handles.append(pch.Patch(color = colors[node],label = node))
+    labels.append(node)
+plt.set_ylim(0,1.5)
+plt.set_xlim(2,20.5)
+mpl.figlegend(handles,labels,loc="upper right") 
+mpl.subplots_adjust(right=0.8)
         
 mpl.savefig("muller-demo2.pdf")

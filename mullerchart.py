@@ -4,6 +4,8 @@ import numpy as np
 from scipy.interpolate import spline
 import pandas as pd
 
+normalize = True
+smoothing = False
 #the abundances of every strain as a function of time.
 mutfreq_orig = {
 "WT":[1,1,1,1,1,1,1,1,1,1,1,1],
@@ -75,13 +77,18 @@ def set_abundances(node,t):
 
 for t in range(len(times)):            
     set_abundances("WT",t)
+    if normalize:
+        tot_size = 0
+        for node in hierarchy:
+            tot_size += abundances[node][t]
+        scale = 1.0/tot_size
+        for node in hierarchy:
+            abundances[node][t] = abundances[node][t] * scale
+
     
 for node in abundances:
     print node
     print abundances[node]
-#to make the curves smooth we need much more time points.
-softtimes = np.linspace(0,len(times),300)
-
 
 sizes = {} #sizes stores, for each strain, the size each "slice" of it occupies at every time point.
 pointabdc = {}  #pointabdc stores, for each strain and every time point, the beginning and ending vertical coordinates
@@ -139,7 +146,7 @@ fig = mpl.figure(figsize = (12,6))
 plt = fig.add_subplot(111)
 handles = []
 labels = []
-for node in pointabdc:
+for node in sorted(pointabdc.keys()):
     for i in range(len(pointabdc[node][0])/2):
         coords = {'time':[],'ymin':[],'ymax':[]}
         for t in range(len(times)):
@@ -157,11 +164,13 @@ for node in pointabdc:
                 coords["time"].append(times[t])
                 coords["ymin"].append(ptmin)
                 coords["ymax"].append(ptmax)
-        softtimes = np.linspace(coords["time"][0],coords["time"][-1],100)
-        softymin = spline(coords["time"],coords["ymin"],softtimes,order=3)
-        softymax = spline(coords["time"],coords["ymax"],softtimes,order=3)
-        plt.fill_between(coords['time'],coords['ymin'],coords['ymax'],color=colors[node],label=node)
-        #plt.fill_between(softtimes,softymin,softymax,color=colors[node])
+        if smoothing:
+            softtimes = np.linspace(coords["time"][0],coords["time"][-1],100)
+            softymin = spline(coords["time"],coords["ymin"],softtimes,order=3)
+            softymax = spline(coords["time"],coords["ymax"],softtimes,order=3)
+            plt.fill_between(softtimes,softymin,softymax,color=colors[node])
+        else:
+            plt.fill_between(coords['time'],coords['ymin'],coords['ymax'],color=colors[node],label=node)
     handles.append(pch.Patch(color = colors[node],label = node))
     labels.append(node)
 plt.set_ylim(0,1.5)

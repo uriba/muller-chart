@@ -4,10 +4,11 @@ import numpy as np
 from scipy.interpolate import spline
 import pandas as pd
 
-normalize = True
-smoothing = False
-#the abundances of every strain as a function of time.
-mutfreq_orig = {
+normalize = False #should the total abundances be normalized to unity.
+smoothing = False #should the resulting plot lines be smoothed via spline.
+
+# The abundances of every mutation in time as fractions of total size of the population
+mutfreq = {
 "WT":[1,1,1,1,1,1,1,1,1,1,1,1],
 "0-crp":[0,0.118881119,0.599878429,0.729227941,0.913538179,0.845454546,0.898015356,0.871893086,0.881793479,0.869071573,0.924837071,0.933035715],
 "0-topA":[0,0.944954128,0.987012987,1,0.956989247,0.983050847,0.941176471,0.951219512,0.902654867,0.808988764,1,1],
@@ -26,11 +27,10 @@ mutfreq_orig = {
 "N-xylA*":[0.047058824,0.66,0.052419355,0.012722646,0,0,0,0,0.002197802,0,0,0]
 }
 
-
+# The times at which the measurements were collected (here in weeks)
 times = [2,4,5,6,8,10,11,13,16,18,19,20.5]
-mutfreq = {}
-for key in mutfreq_orig:
-    mutfreq[key] = np.around(mutfreq_orig[key],2)
+
+# Round the real data to 2 digits for simplicity and print it.
 df = pd.DataFrame
 df = df.from_dict(mutfreq,orient="index")
 df = np.round(df,2)
@@ -38,7 +38,7 @@ df.columns = times
 
 print df
 
-#This dictionary states for each strain its decendants.
+# A dictionary stating for each strain its decendants. The order specified here determines the vertical order in which multiple decendants will be plotted. Earlier in the list = lower in the plot.
 hierarchy = {"WT":['0-xylE'],
             '0-xylE':['0-topA'],
             '0-topA':['N-xylA*','0-crp'],
@@ -57,9 +57,9 @@ hierarchy = {"WT":['0-xylE'],
             'N-crp*':[],
             }
 
-#the times used - in this example I simply used the index of the measurements.
-print times
-
+# The abundances dictionary states the abundance of every strain in the population at every time plot. It is calculated
+# from the mutfreq dictionary above by subtracting from the frequency of every mutation the frequencies of all of its
+# sub-mutations (recursively), at each time point.
 abundances = {}
 for node in hierarchy:
     abundances[node]=[]
@@ -70,14 +70,14 @@ def set_abundances(node,t):
         son_size = set_abundances(son,t)
         sz += son_size
     my_size = max(mutfreq[node][t],sz)
-    if sz > mutfreq[node][t]:
+    if sz > mutfreq[node][t]: # If the data is contradictory, having a mutation the decendents of which exceeding its own frequency, print a report about it and the amount that it was rounded up by.
         print "%s, at time %.1f, rounded %.2f" % (node,times[t],sz-mutfreq[node][t])
     abundances[node].append(my_size-sz)
     return my_size
 
 for t in range(len(times)):            
     set_abundances("WT",t)
-    if normalize:
+    if normalize: # normalize the sum of abundances of all the strains to unity, which is not always the case in real experimental data.
         tot_size = 0
         for node in hierarchy:
             tot_size += abundances[node][t]
@@ -86,44 +86,45 @@ for t in range(len(times)):
             abundances[node][t] = abundances[node][t] * scale
 
     
-for node in abundances:
-    print node
-    print abundances[node]
+sizes = {}  # Sizes stores, for each strain, the size each "slice" of it occupies at every time point (slice is a vertical
+            # portion of the graph that is colored in that strain's color. At a given time point a strain may have few 
+            # slices as they "wrap" every one of its decendent strains).
 
-sizes = {} #sizes stores, for each strain, the size each "slice" of it occupies at every time point.
-pointabdc = {}  #pointabdc stores, for each strain and every time point, the beginning and ending vertical coordinates
+pointabdc = {}  # pointabdc stores, for each strain and every time point, the beginning and ending vertical coordinates
                 # of each of its slices.
 
 #initialize the sizes dictionary
 for i in hierarchy:
-    dec = len(hierarchy[i])
-    ser = []
+    decendents = len(hierarchy[i])
+    sizes[i] = []
     for j in abundances[i]:
-        ser.append(float(j)/(dec+1))
-    sizes[i]=ser
+        sizes[i].append(float(j)/(decendents+1))    # The width of every slice is the abundance of the strain divided 
+                                                    # by its number of decendents + 1 so enough slices exist to wrap all the decendents.
     pointabdc[i] = []
 
-#two recursive functions needed to initialize the pointabdc dictionary
+# Two recursive functions needed to initialize the pointabdc dictionary:
+# calc_size calculates, given a strain and a time point, the fraction of the population that node and its decendents occupy (recursively).
 def calc_size(node,t):
     nodesize = abundances[node][t]
     for son in hierarchy[node]:
         nodesize+=calc_size(son,t)
     return nodesize
 
+# calc_splits calculates the vertical beginning and ending point of each slice by interleaving them with the daughter strains of the given node (recursively).
 def calc_splits(node,t,offset):
     slice_size = sizes[node][t] 
-    points = [offset,offset+slice_size]
+    points = [offset,offset+slice_size] # first slice starts at the starting offset of the node and is slice_size tall (as are all the slices)
     for son in hierarchy[node]:
         calc_splits(son,t,points[-1])
         sz = calc_size(son,t)
-        points.append(points[-1]+sz)
-        points.append(points[-1]+slice_size)
+        points.append(points[-1]+sz)    # the next slice starts after the daughter strain ends
+        points.append(points[-1]+slice_size) # and is again slice_size wide
     pointabdc[node].append(points)
     
 for t in range(len(times)):
-    calc_splits("WT",t,0) #for every time point do a recursive calculation of the slices each strain occupies
+    calc_splits("WT",t,0) # For every time point recursively calculate the slices each strain occupies
 
-### generating the plotting data    
+# Assign colors to the different strains
 colors = {"WT":"0.3",
             '0-xylE':"#500000",
             '0-topA':"#700000",
@@ -144,15 +145,23 @@ colors = {"WT":"0.3",
 
 fig = mpl.figure(figsize = (12,6))
 plt = fig.add_subplot(111)
+
+# These are needed for the legend
 handles = []
 labels = []
+
+# Loop through the strains and plot each one's slices.
+
 for node in sorted(pointabdc.keys()):
-    for i in range(len(pointabdc[node][0])/2):
+    for i in range(len(pointabdc[node][0])/2): # Each slice is defined by two lines - the lower and upper bounds of the slice.
         coords = {'time':[],'ymin':[],'ymax':[]}
         for t in range(len(times)):
             ptmin = pointabdc[node][t][2*i]
             ptmax = pointabdc[node][t][2*i+1]
-            if t == 0:
+                # For nicer visualization we omit slices of width 0 as they clutter the graph. We do need to include
+                # slices of width zero if they either preceed or succeed a time point with that slice being non zero,
+                # to show the emergence or decline of that strain.
+            if t == 0:  
                 diffprev = 0
             else:
                 diffprev = pointabdc[node][t-1][2*i+1] - pointabdc[node][t-1][2*i]
@@ -160,22 +169,23 @@ for node in sorted(pointabdc.keys()):
                 diffnext = 0
             else:
                 diffnext = pointabdc[node][t+1][2*i+1] - pointabdc[node][t+1][2*i]
-            if ptmax-ptmin+diffprev+diffnext > 0.005:
+            if ptmax-ptmin+diffprev+diffnext > 0.005: # The threshold we use to decide if to include this timepoint in the relevant series.
                 coords["time"].append(times[t])
                 coords["ymin"].append(ptmin)
                 coords["ymax"].append(ptmax)
-        if smoothing:
+        if smoothing: #Smoothing can be applied to make the plot more visually appealing but with spline it does not always produce the desired results
             softtimes = np.linspace(coords["time"][0],coords["time"][-1],100)
             softymin = spline(coords["time"],coords["ymin"],softtimes,order=3)
             softymax = spline(coords["time"],coords["ymax"],softtimes,order=3)
             plt.fill_between(softtimes,softymin,softymax,color=colors[node])
         else:
             plt.fill_between(coords['time'],coords['ymin'],coords['ymax'],color=colors[node],label=node)
+    # Take care of the legend.
     handles.append(pch.Patch(color = colors[node],label = node))
     labels.append(node)
 plt.set_ylim(0,1.5)
 plt.set_xlim(2,20.5)
 mpl.figlegend(handles,labels,loc="upper right") 
 mpl.subplots_adjust(right=0.8)
-        
-mpl.savefig("muller-demo2.pdf")
+# And violla, our marvellous plot...        
+mpl.savefig("muller-chart.pdf")

@@ -3,59 +3,22 @@ import matplotlib.patches as pch
 import numpy as np
 from scipy.interpolate import spline
 import pandas as pd
+from pandas.io.parsers import read_csv
 
-normalize = False #should the total abundances be normalized to unity.
-smoothing = False #should the resulting plot lines be smoothed via spline.
+freq_file_name = "Muller_Data.csv"      #The file name where the frequencies of the strains and timepoints are specified
+hierarchy_filename = "Hierarchy.txt"    #The file that contains the strain hierarchy data in Python dictionary syntax with
+                                        # keys being the strain names and values being a list of the daughter strains.
 
-# The abundances of every mutation in time as fractions of total size of the population
-mutfreq = {
-"WT":[1,1,1,1,1,1,1,1,1,1,1,1],
-"0-crp":[0,0.118881119,0.599878429,0.729227941,0.913538179,0.845454546,0.898015356,0.871893086,0.881793479,0.869071573,0.924837071,0.933035715],
-"0-topA":[0,0.944954128,0.987012987,1,0.956989247,0.983050847,0.941176471,0.951219512,0.902654867,0.808988764,1,1],
-"0-xylE":[0.33974359,0.971014493,1,1,0.988023952,0.950980392,0.926829268,0.973856209,0.955555556,0.886792453,0.979865772,0.985507246],
-"0-yjiY":[0,0.020698443,0.053251186,0.150121938,0.965277778,0.958000887,0.935779817,0.937282135,0.936507937,0.865771812,0.985915493,0.991150442],
-"1-malE":[0,0.008264463,0,0,0.114754098,0.234042553,0.369747899,0.315068493,0.820754717,0.735042735,0.114503817,0.380165289],
-"1-mlc+2":[0,0,0,0.002666667,0.84365705,0.7241301,0.747863248,0.916050042,0.898124854,0.755029262,0.211945371,0.336181978],
-"1-prs+2":[0.001980198,0,0.001574803,0,0,0,0,0,0.028377293,0.009381545,0.144418747,0.345030256],
-"1-thrA+2":[0,0,0,0,0.01,0.17,0.02,0.01,0.34358872,0.726033412,0.24,0.39],
-"2-cbdA":[0,0,0,0,0,0,0,0,0,0.01010101,0.113043478,0.044247788],
-"2-fli":[0,0,0.011235955,0.125,0.024590164,0.060869565,0,0.024539877,0.007352941,0.234848485,0.789473684,0.63559322],
-"2-icd":[0,0,0.061327832,0.06027668,0.111763237,0.049136391,0.359432347,0.294515064,0.383649456,0.207464147,0.670754717,0.442550505],
-"2-mlc+2":[0,0,0,0,0,0.001494768,0,0,0.006483338,0.114128627,0.68983125,0.487441085],
-"2-prs+7":[0,0,0,0.003430938,0,0.001347709,0,0,0.001335113,0.104886519,0.709374974,0.527642027],
-"N-crp*":[0,0.057569745,0.517433467,0.56119193,0.00204499,0,0.005509642,0,0.004694836,0.004385965,0.002252252,0.002873563],
-"N-xylA*":[0.047058824,0.66,0.052419355,0.012722646,0,0,0,0,0.002197802,0,0,0]
-}
+normalize = False                   #should the total abundances be normalized to unity.
+smoothing = False                   #should the resulting plot lines be smoothed via spline.
 
-# The times at which the measurements were collected (here in weeks)
-times = [2,4,5,6,8,10,11,13,16,18,19,20.5]
-
-# Round the real data to 2 digits for simplicity and print it.
-df = pd.DataFrame
-df = df.from_dict(mutfreq,orient="index")
-df = np.round(df,2)
-df.columns = times
-
-print df
+freq = read_csv(freq_file_name,header=None,index_col = 0)
+freq = freq.transpose()
+times = freq['Time']
+freq = freq.drop('Time',1)
 
 # A dictionary stating for each strain its decendants. The order specified here determines the vertical order in which multiple decendants will be plotted. Earlier in the list = lower in the plot.
-hierarchy = {"WT":['0-xylE'],
-            '0-xylE':['0-topA'],
-            '0-topA':['N-xylA*','0-crp'],
-            '0-crp':['0-yjiY','N-crp*'],
-            '0-yjiY':['1-mlc+2','2-icd'],
-            '1-mlc+2':['1-malE'],
-            '1-malE':['1-thrA+2'],
-            '1-thrA+2':['1-prs+2'],
-            '1-prs+2':[],
-            '2-icd':['2-fli'],
-            '2-fli':['2-mlc+2'],
-            '2-mlc+2':['2-prs+7'],
-            '2-prs+7':['2-cbdA'],
-            '2-cbdA':[],
-            'N-xylA*':[],
-            'N-crp*':[],
-            }
+hierarchy = eval(open(hierarchy_filename,'r').read())
 
 # The abundances dictionary states the abundance of every strain in the population at every time plot. It is calculated
 # from the mutfreq dictionary above by subtracting from the frequency of every mutation the frequencies of all of its
@@ -69,13 +32,13 @@ def set_abundances(node,t):
     for son in hierarchy[node]:
         son_size = set_abundances(son,t)
         sz += son_size
-    my_size = max(mutfreq[node][t],sz)
-    if sz > mutfreq[node][t]: # If the data is contradictory, having a mutation the decendents of which exceeding its own frequency, print a report about it and the amount that it was rounded up by.
-        print "%s, at time %.1f, rounded %.2f" % (node,times[t],sz-mutfreq[node][t])
+    my_size = max(freq.loc[t,node],sz)
+    if sz > freq.loc[t,node]: # If the data is contradictory, having a mutation the decendents of which exceeding its own frequency, print a report about it and the amount that it was rounded up by.
+        print "%s, at time %.1f, rounded %.2f" % (node,times[t],sz-freq.loc[t,node])
     abundances[node].append(my_size-sz)
     return my_size
 
-for t in range(len(times)):            
+for t in range(1,len(times)+1):            
     set_abundances("WT",t)
     if normalize: # normalize the sum of abundances of all the strains to unity, which is not always the case in real experimental data.
         tot_size = 0
@@ -151,7 +114,6 @@ handles = []
 labels = []
 
 # Loop through the strains and plot each one's slices.
-
 for node in sorted(pointabdc.keys()):
     for i in range(len(pointabdc[node][0])/2): # Each slice is defined by two lines - the lower and upper bounds of the slice.
         coords = {'time':[],'ymin':[],'ymax':[]}
@@ -170,7 +132,7 @@ for node in sorted(pointabdc.keys()):
             else:
                 diffnext = pointabdc[node][t+1][2*i+1] - pointabdc[node][t+1][2*i]
             if ptmax-ptmin+diffprev+diffnext > 0.005: # The threshold we use to decide if to include this timepoint in the relevant series.
-                coords["time"].append(times[t])
+                coords["time"].append(times[t+1])
                 coords["ymin"].append(ptmin)
                 coords["ymax"].append(ptmax)
         if smoothing: #Smoothing can be applied to make the plot more visually appealing but with spline it does not always produce the desired results

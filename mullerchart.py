@@ -88,7 +88,7 @@ for t in range(len(times)):
     calc_splits("WT",t,0) # For every time point recursively calculate the slices each strain occupies
 
 # Assign colors to the different strains
-colors = {"WT":"0.3",
+colors = {"WT":"white",
             '0-xylE':"#500000",
             '0-topA':"#700000",
             '0-crp':"#900000",
@@ -117,31 +117,30 @@ labels = []
 for node in sorted(pointabdc.keys()):
     for i in range(len(pointabdc[node][0])/2): # Each slice is defined by two lines - the lower and upper bounds of the slice.
         coords = {'time':[],'ymin':[],'ymax':[]}
+        tstart = None
         for t in range(len(times)):
             ptmin = pointabdc[node][t][2*i]
             ptmax = pointabdc[node][t][2*i+1]
                 # For nicer visualization we omit slices of width 0 as they clutter the graph. We do need to include
                 # slices of width zero if they either preceed or succeed a time point with that slice being non zero,
                 # to show the emergence or decline of that strain.
-            if t == 0:  
-                diffprev = 0
-            else:
-                diffprev = pointabdc[node][t-1][2*i+1] - pointabdc[node][t-1][2*i]
-            if t == len(times)-1:
-                diffnext = 0
-            else:
-                diffnext = pointabdc[node][t+1][2*i+1] - pointabdc[node][t+1][2*i]
-            if ptmax-ptmin+diffprev+diffnext > 0.005: # The threshold we use to decide if to include this timepoint in the relevant series.
-                coords["time"].append(times[t+1])
-                coords["ymin"].append(ptmin)
-                coords["ymax"].append(ptmax)
+            if ptmax-ptmin>0.005:   #threshold to avoid rounding issues
+                if not tstart:
+                    tstart = times[max(1,t)]
+                tend = times[min(t+2,len(times))]
+            coords["time"].append(times[t+1])
+            coords["ymin"].append(ptmin)
+            coords["ymax"].append(ptmax)
         if smoothing: #Smoothing can be applied to make the plot more visually appealing but with spline it does not always produce the desired results
-            softtimes = np.linspace(coords["time"][0],coords["time"][-1],100)
-            softymin = spline(coords["time"],coords["ymin"],softtimes,order=3)
-            softymax = spline(coords["time"],coords["ymax"],softtimes,order=3)
-            plt.fill_between(softtimes,softymin,softymax,color=colors[node])
+            time = np.linspace(coords["time"][0],coords["time"][-1],100)
+            ymin = spline(coords["time"],coords["ymin"],time)
+            ymax = spline(coords["time"],coords["ymax"],time)
         else:
-            plt.fill_between(coords['time'],coords['ymin'],coords['ymax'],color=colors[node],label=node)
+            time = np.array(coords['time'])
+            ymin = np.array(coords['ymin'])
+            ymax = np.array(coords['ymax'])
+        indices = (time>=tstart) & (time<=tend)
+        plt.fill_between(time[indices],ymin[indices],ymax[indices],color=colors[node],label=node)
     # Take care of the legend.
     handles.append(pch.Patch(color = colors[node],label = node))
     labels.append(node)

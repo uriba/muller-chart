@@ -103,7 +103,9 @@ colors = {"WT":"white",
             '2-prs+7':"#008fb2",
             '2-cbdA':"#00ccff",
             'N-xylA*':"0.5",
-            'N-crp*':"0.7"
+            'N-crp*':"0.7",
+            'N-rpoB*':"0.0",
+            "1-rpoB-malE":"0.1"
             }
 
 fig = mpl.figure(figsize = (12,6))

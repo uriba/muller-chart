@@ -3,7 +3,7 @@
 '0-topA':['N-xylA*','0-crp'],
 '0-crp':['0-yjiY','N-crp*'],
 '0-yjiY':['1-mlc+2','2-fli'],
-'1-mlc+2':['1-malE'],
+'1-mlc+2':["N-rpoB*",'1-malE'],
 '1-malE':['1-thrA+2'],
 '1-thrA+2':['1-prs+2'],
 '1-prs+2':[],
@@ -12,4 +12,6 @@
 '2-prs+7':['2-cbdA'],
 '2-cbdA':[],
 'N-xylA*':[],
-'N-crp*':[]}
+'N-crp*':[],
+'N-rpoB*':["1-rpoB-malE"],
+"1-rpoB-malE":[]}

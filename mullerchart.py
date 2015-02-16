@@ -16,6 +16,13 @@ freq = read_csv(freq_file_name,header=None,index_col = 0)
 freq = freq.transpose()
 times = freq['Time']
 freq = freq.drop('Time',1)
+for col in freq.columns:
+    freq[col] = np.around(freq[col],2)
+freq['0-topA'] = freq['0-topA']-freq['N-xylA*'] - freq['N-crp*']
+freq['0-crp'] = freq['0-crp']-freq['N-crp*']
+freq['0-topA-tmp'] = 0.0
+freq['fake1'] = 0.0
+freq['fake2'] = 0.0
 
 # A dictionary stating for each strain its decendants. The order specified here determines the vertical order in which multiple decendants will be plotted. Earlier in the list = lower in the plot.
 hierarchy = eval(open(hierarchy_filename,'r').read())
@@ -105,7 +112,10 @@ colors = {"WT":"white",
             'N-xylA*':"0.5",
             'N-crp*':"0.7",
             'N-rpoB*':"0.0",
-            "1-rpoB-malE":"0.1"
+            "1-rpoB-malE":"0.1",
+            '0-topA-tmp':"0.0",
+            'fake2':"0.0",
+            'fake1':"0.0"
             }
 
 fig = mpl.figure(figsize = (12,6))
@@ -133,6 +143,8 @@ for node in sorted(pointabdc.keys()):
             coords["time"].append(times[t+1])
             coords["ymin"].append(ptmin)
             coords["ymax"].append(ptmax)
+        if not tstart:
+            continue
         if smoothing: #Smoothing can be applied to make the plot more visually appealing but with spline it does not always produce the desired results
             time = np.linspace(coords["time"][0],coords["time"][-1],100)
             ymin = spline(coords["time"],coords["ymin"],time)

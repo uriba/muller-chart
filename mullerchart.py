@@ -27,7 +27,8 @@ freq['fake3'] = 0.0
 freq['fake5'] = 0.0
 
 # A dictionary stating for each strain its decendants. The order specified here determines the vertical order in which multiple decendants will be plotted. Earlier in the list = lower in the plot.
-hierarchy = eval(open(hierarchy_filename,'r').read())
+with open(hierarchy_filename,'r') as f:
+    hierarchy = eval(f.read())
 
 # The abundances dictionary states the abundance of every strain in the population at every time plot. It is calculated
 # from the mutfreq dictionary above by subtracting from the frequency of every mutation the frequencies of all of its

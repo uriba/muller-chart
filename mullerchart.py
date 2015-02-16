@@ -18,11 +18,13 @@ times = freq['Time']
 freq = freq.drop('Time',1)
 for col in freq.columns:
     freq[col] = np.around(freq[col],2)
-freq['0-topA'] = freq['0-topA']-freq['N-xylA*'] - freq['N-crp*']
+freq['0-topA'] = freq['0-topA']-freq['N-xylA*'] - freq[['0-crp','0-yjiY']].max(axis=1)
 freq['0-crp'] = freq['0-crp']-freq['N-crp*']
 freq['0-topA-tmp'] = 0.0
 freq['fake1'] = 0.0
 freq['fake2'] = 0.0
+freq['fake3'] = 0.0
+freq['fake5'] = 0.0
 
 # A dictionary stating for each strain its decendants. The order specified here determines the vertical order in which multiple decendants will be plotted. Earlier in the list = lower in the plot.
 hierarchy = eval(open(hierarchy_filename,'r').read())
@@ -96,30 +98,35 @@ for t in range(len(times)):
 
 # Assign colors to the different strains
 colors = {"WT":"white",
-'0-xylE':(0.0,0.0,0.25),
-'0-topA':(0.0,0.0,0.5),
-'0-crp':(0.0,0.0,0.75),
-'0-yjiY':(0.0,0.0,0.5),
-'1-mlc+2':(0.0,0.25,0.5),
-'1-malE':(0.0,0.5,0.5),
-'1-thrA+2':(0.0,0.75,0.5),
-'1-prs+2':(0.0,1.0,0.5),
-'2-fli':(0.25,0.0,0.5),
-'2-mlc+2':(0.5,0.0,0.5),
-'2-prs+7':(0.75,0.0,0.5),
-'2-cbdA':(1.0,0.0,0.5), 
-            '2-icd':"#000030",
-            'N-xylA*':"0.5",
-            'N-crp*':"0.7",
-            'N-rpoB*':"0.0",
-            "1-rpoB-malE":"0.2",
+'0-xylE':(0.8,0.8,1.0),
+'0-topA':(0.6,0.6,0.8),
+'0-crp':(0.4,0.4,0.6),
+'0-yjiY':(0.2,0.2,0.5),
+'2-mlc+2':(0.0,0.4,0.5),
+'2-malE':(0.0,0.5,0.5),
+'2-thrA+2':(0.0,0.75,0.5),
+'2-prs+2':(0.0,1.0,0.5),
+'1-fliF':(0.35,0.0,0.5),
+'1-mlc+2':(0.5,0.0,0.5),
+'1-prs+7':(0.5,0.0,0.75),
+'1-cbdA':(0.75,0.0,0.75), 
+            '1-icd':"#000030",
+            'N-xylA*':"0.7",
+            'N-crp*':"0.5",
+            'N-rpoB*':(0.0,0.5,0.4),
+            "2-rpoB-malE":(0.0,0.7,0.4),
             '0-topA-tmp':"0.0",
+            '0-topA-tmp2':"0.0",
             'fake2':"0.0",
+            'fake3':"0.0",
+            'fake5':"0.0",
             'fake1':"0.0"
             }
 excluded = ['0-topA-tmp', 'fake2', 'fake1']
+nodes = ["WT", '0-xylE','N-xylA*', 'N-crp*','0-topA', '0-crp', '0-yjiY', '1-fliF','2-mlc+2', '2-malE', '2-thrA+2', '2-prs+2', 'N-rpoB*', "2-rpoB-malE", '1-mlc+2',
+'1-prs+7', '1-cbdA']
 
-fig = mpl.figure(figsize = (12,6))
+fig = mpl.figure(figsize = (14,6))
 plt = fig.add_subplot(111)
 
 # These are needed for the legend
@@ -127,7 +134,7 @@ handles = []
 labels = []
 
 # Loop through the strains and plot each one's slices.
-for node in sorted(pointabdc.keys()):
+for node in nodes:
     for i in range(len(pointabdc[node][0])/2): # Each slice is defined by two lines - the lower and upper bounds of the slice.
         coords = {'time':[],'ymin':[],'ymax':[]}
         tstart = None
@@ -160,9 +167,13 @@ for node in sorted(pointabdc.keys()):
     if node not in excluded:
         handles.append(pch.Patch(color = colors[node],label = node))
         labels.append(node)
-plt.set_ylim(0,1.5)
+plt.set_ylim(0,1.1)
 plt.set_xlim(2,20.5)
-mpl.figlegend(handles,labels,loc="upper right") 
+plt.tick_params(axis='both', which='major', labelsize=18)
+plt.tick_params(axis='both', which='minor', labelsize=18)
+plt.set_xlabel("time [weeks]", fontsize = 20)
+plt.set_ylabel("population fraction", fontsize = 20)
+mpl.figlegend(handles,labels,loc="right") 
 mpl.subplots_adjust(right=0.8)
 # And violla, our marvellous plot...        
 mpl.savefig("muller-chart.pdf")

@@ -18,9 +18,9 @@ times = freq['Time']
 freq = freq.drop('Time',1)
 for col in freq.columns:
     freq[col] = np.around(freq[col],2)
-freq['0-topA'] = freq['0-topA']-freq['N-xylA*'] - freq[['0-crp','0-yjiY']].max(axis=1)
-freq['0-crp'] = freq['0-crp']-freq['N-crp*']
-freq['0-topA-tmp'] = 0.0
+#freq['0-topA'] = freq['0-topA']-freq['N-xylA*'] - freq[['0-crp','0-yjiY']].max(axis=1)
+#freq['0-crp'] = freq['0-crp']-freq['N-crp*']
+#freq['0-topA-tmp'] = 0.0
 freq['fake1'] = 0.0
 freq['fake2'] = 0.0
 freq['fake3'] = 0.0

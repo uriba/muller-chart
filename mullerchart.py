@@ -165,7 +165,7 @@ for node in nodes:
         plt.fill_between(time[indices],ymin[indices],ymax[indices],color=colors[node],label=node)
     # Take care of the legend.
     if node not in excluded:
-        handles.append(pch.Patch(color = colors[node],label = node))
+        handles.append(pch.Patch(facecolor = colors[node],edgecolor = "0.0",label = node))
         labels.append(node)
 plt.set_ylim(0,1.1)
 plt.set_xlim(2,20.5)

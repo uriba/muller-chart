@@ -96,27 +96,28 @@ for t in range(len(times)):
 
 # Assign colors to the different strains
 colors = {"WT":"white",
-            '0-xylE':"#500000",
-            '0-topA':"#700000",
-            '0-crp':"#900000",
-            '0-yjiY':"#a00000",
-            '1-mlc+2':"#005000",
-            '1-malE':"#007000",
-            '1-thrA+2':"#009000",
-            '1-prs+2':"#00c000",
+'0-xylE':(0.0,0.0,0.25),
+'0-topA':(0.0,0.0,0.5),
+'0-crp':(0.0,0.0,0.75),
+'0-yjiY':(0.0,0.0,0.5),
+'1-mlc+2':(0.0,0.25,0.5),
+'1-malE':(0.0,0.5,0.5),
+'1-thrA+2':(0.0,0.75,0.5),
+'1-prs+2':(0.0,1.0,0.5),
+'2-fli':(0.25,0.0,0.5),
+'2-mlc+2':(0.5,0.0,0.5),
+'2-prs+7':(0.75,0.0,0.5),
+'2-cbdA':(1.0,0.0,0.5), 
             '2-icd':"#000030",
-            '2-fli':"#000060",
-            '2-mlc+2':"#000090",
-            '2-prs+7':"#008fb2",
-            '2-cbdA':"#00ccff",
             'N-xylA*':"0.5",
             'N-crp*':"0.7",
             'N-rpoB*':"0.0",
-            "1-rpoB-malE":"0.1",
+            "1-rpoB-malE":"0.2",
             '0-topA-tmp':"0.0",
             'fake2':"0.0",
             'fake1':"0.0"
             }
+excluded = ['0-topA-tmp', 'fake2', 'fake1']
 
 fig = mpl.figure(figsize = (12,6))
 plt = fig.add_subplot(111)
@@ -143,7 +144,7 @@ for node in sorted(pointabdc.keys()):
             coords["time"].append(times[t+1])
             coords["ymin"].append(ptmin)
             coords["ymax"].append(ptmax)
-        if not tstart:
+        if node in excluded:
             continue
         if smoothing: #Smoothing can be applied to make the plot more visually appealing but with spline it does not always produce the desired results
             time = np.linspace(coords["time"][0],coords["time"][-1],100)
@@ -156,8 +157,9 @@ for node in sorted(pointabdc.keys()):
         indices = (time>=tstart) & (time<=tend)
         plt.fill_between(time[indices],ymin[indices],ymax[indices],color=colors[node],label=node)
     # Take care of the legend.
-    handles.append(pch.Patch(color = colors[node],label = node))
-    labels.append(node)
+    if node not in excluded:
+        handles.append(pch.Patch(color = colors[node],label = node))
+        labels.append(node)
 plt.set_ylim(0,1.5)
 plt.set_xlim(2,20.5)
 mpl.figlegend(handles,labels,loc="upper right") 

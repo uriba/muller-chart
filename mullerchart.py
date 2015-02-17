@@ -21,7 +21,8 @@ for col in freq.columns:
     freq[col] = np.around(freq[col],2)
 
 # A dictionary stating for each strain its decendants. The order specified here determines the vertical order in which multiple decendants will be plotted. Earlier in the list = lower in the plot.
-hierarchy = eval(open(hierarchy_filename,'r').read())
+with open(hierarchy_filename,'r') as f:
+    hierarchy = eval(f.read())
 
 # plot the hierarchy tree:
 

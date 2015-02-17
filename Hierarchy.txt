@@ -3,9 +3,9 @@
 '0-topA':['N-xylA*','0-crp'],
 '0-crp':['0-yjiY','N-crp*'],
 '0-yjiY':['2-mlc+2','1-fliF'],
-'2-mlc+2':['2-malE','fake1','fake2',"N-rpoB*",'fake3'],
-'2-malE':['2-thrA+2'],
-'2-thrA+2':['2-prs+2','fake5'],
+'2-mlc+2':['2-malE'],#,"N-rpoB*",'fake3'],
+'2-malE':['2-thrA+2',"N-rpoB*"],
+'2-thrA+2':['2-prs+2'],
 '2-prs+2':[],
 '1-fliF':['1-mlc+2'],
 '1-mlc+2':['1-prs+7'],
@@ -17,7 +17,7 @@
 'fake2':[],
 'fake3':[],
 'fake5':[],
-'N-rpoB*':["2-rpoB-malE"],
-"2-rpoB-malE":[]}
+'N-rpoB*':[]} #["2-rpoB-malE"],
+#"2-rpoB-malE":[]}
 
 

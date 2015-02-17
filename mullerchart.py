@@ -4,6 +4,7 @@ import numpy as np
 from scipy.interpolate import spline
 import pandas as pd
 from pandas.io.parsers import read_csv
+import pydot
 
 freq_file_name = "Muller_Data.csv"      #The file name where the frequencies of the strains and timepoints are specified
 hierarchy_filename = "Hierarchy.txt"    #The file that contains the strain hierarchy data in Python dictionary syntax with
@@ -18,17 +19,23 @@ times = freq['Time']
 freq = freq.drop('Time',1)
 for col in freq.columns:
     freq[col] = np.around(freq[col],2)
-#freq['0-topA'] = freq['0-topA']-freq['N-xylA*'] - freq[['0-crp','0-yjiY']].max(axis=1)
-#freq['0-crp'] = freq['0-crp']-freq['N-crp*']
-#freq['0-topA-tmp'] = 0.0
-freq['fake1'] = 0.0
-freq['fake2'] = 0.0
-freq['fake3'] = 0.0
-freq['fake5'] = 0.0
 
 # A dictionary stating for each strain its decendants. The order specified here determines the vertical order in which multiple decendants will be plotted. Earlier in the list = lower in the plot.
 hierarchy = eval(open(hierarchy_filename,'r').read())
 
+# plot the hierarchy tree:
+
+graph = pydot.Dot(graph_type = 'graph')
+def plot_tree(node,graphNode):
+    for son in hierarchy[node]:
+        sonNode = pydot.Node(son,label=son)
+        graph.add_edge(pydot.Edge(graphNode,sonNode))
+        plot_tree(son,sonNode)
+
+root = pydot.Node("WT",label="WT")
+plot_tree("WT",root)
+
+graph.write_png("hierarchy.png")
 # The abundances dictionary states the abundance of every strain in the population at every time plot. It is calculated
 # from the mutfreq dictionary above by subtracting from the frequency of every mutation the frequencies of all of its
 # sub-mutations (recursively), at each time point.
@@ -56,7 +63,6 @@ for t in range(1,len(times)+1):
         scale = 1.0/tot_size
         for node in hierarchy:
             abundances[node][t] = abundances[node][t] * scale
-
     
 sizes = {}  # Sizes stores, for each strain, the size each "slice" of it occupies at every time point (slice is a vertical
             # portion of the graph that is colored in that strain's color. At a given time point a strain may have few 
@@ -103,27 +109,19 @@ colors = {"WT":"white",
 '0-crp':(0.4,0.4,0.6),
 '0-yjiY':(0.2,0.2,0.5),
 '2-mlc+2':(0.0,0.4,0.5),
-'2-malE':(0.0,0.5,0.5),
+'2-malE':(0.0,0.6,0.6),
 '2-thrA+2':(0.0,0.75,0.5),
 '2-prs+2':(0.0,1.0,0.5),
 '1-fliF':(0.35,0.0,0.5),
 '1-mlc+2':(0.5,0.0,0.5),
 '1-prs+7':(0.5,0.0,0.75),
 '1-cbdA':(0.75,0.0,0.75), 
-            '1-icd':"#000030",
             'N-xylA*':"0.7",
             'N-crp*':"0.5",
-            'N-rpoB*':(0.0,0.5,0.4),
-            "2-rpoB-malE":(0.0,0.7,0.4),
-            '0-topA-tmp':"0.0",
-            '0-topA-tmp2':"0.0",
-            'fake2':"0.0",
-            'fake3':"0.0",
-            'fake5':"0.0",
-            'fake1':"0.0"
+            'N-rpoB*':(0.0,0.5,0.3),
             }
-excluded = ['0-topA-tmp', 'fake2', 'fake1']
-nodes = ["WT", '0-xylE','N-xylA*', 'N-crp*','0-topA', '0-crp', '0-yjiY', '1-fliF','2-mlc+2', '2-malE', '2-thrA+2', '2-prs+2', 'N-rpoB*', "2-rpoB-malE", '1-mlc+2',
+nodes = ["WT", '0-xylE','N-xylA*', 'N-crp*','0-topA', '0-crp', '0-yjiY', '1-fliF','2-mlc+2', '2-malE', '2-thrA+2', '2-prs+2', 'N-rpoB*',# "2-rpoB-malE",
+ '1-mlc+2',
 '1-prs+7', '1-cbdA']
 
 fig = mpl.figure(figsize = (14,6))
@@ -145,14 +143,12 @@ for node in nodes:
                 # slices of width zero if they either preceed or succeed a time point with that slice being non zero,
                 # to show the emergence or decline of that strain.
             if ptmax-ptmin>0.005:   #threshold to avoid rounding issues
-                if not tstart:
+                if tstart is None:
                     tstart = times[max(1,t)]
                 tend = times[min(t+2,len(times))]
             coords["time"].append(times[t+1])
             coords["ymin"].append(ptmin)
             coords["ymax"].append(ptmax)
-        if node in excluded:
-            continue
         if smoothing: #Smoothing can be applied to make the plot more visually appealing but with spline it does not always produce the desired results
             time = np.linspace(coords["time"][0],coords["time"][-1],100)
             ymin = spline(coords["time"],coords["ymin"],time)
@@ -164,11 +160,10 @@ for node in nodes:
         indices = (time>=tstart) & (time<=tend)
         plt.fill_between(time[indices],ymin[indices],ymax[indices],color=colors[node],label=node)
     # Take care of the legend.
-    if node not in excluded:
-        handles.append(pch.Patch(facecolor = colors[node],edgecolor = "0.0",label = node))
-        labels.append(node)
+    handles.append(pch.Patch(facecolor = colors[node],edgecolor = "0.0",label = node))
+    labels.append(node)
 plt.set_ylim(0,1.1)
-plt.set_xlim(2,20.5)
+plt.set_xlim(0,20.5)
 plt.tick_params(axis='both', which='major', labelsize=18)
 plt.tick_params(axis='both', which='minor', labelsize=18)
 plt.set_xlabel("time [weeks]", fontsize = 20)

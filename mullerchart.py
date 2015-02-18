@@ -120,10 +120,13 @@ colors = {"WT":"white",
             'N-xylA*':"0.7",
             'N-crp*':"0.5",
             'N-rpoB*':(0.0,0.5,0.3),
+            'N-brnQ*':(0.0,0.6,0.3), 
+            'N-nadB*':(0.0,0.4,0.3),
+            'N-ptsI*':(0.0,0.4,0.2),
             }
 nodes = ["WT", '0-xylE','N-xylA*', 'N-crp*','0-topA', '0-crp', '0-yjiY', '1-fliF','2-mlc+2', '2-malE', '2-thrA+2', '2-prs+2', 'N-rpoB*',# "2-rpoB-malE",
  '1-mlc+2',
-'1-prs+7', '1-cbdA']
+'1-prs+7', '1-cbdA','N-brnQ*','N-nadB*','N-ptsI*']
 
 fig = mpl.figure(figsize = (14,6))
 plt = fig.add_subplot(111)

@@ -13,10 +13,9 @@ hierarchy_filename = "Hierarchy.txt"    #The file that contains the strain hiera
 normalize = False                   #should the total abundances be normalized to unity.
 smoothing = False                   #should the resulting plot lines be smoothed via spline.
 
+
 freq = read_csv(freq_file_name,header=None,index_col = 0)
 freq = freq.transpose()
-times = freq['Time']
-freq = freq.drop('Time',1)
 for col in freq.columns:
     freq[col] = np.around(freq[col],2)
 
@@ -37,92 +36,106 @@ root = pydot.Node("WT",label="WT")
 plot_tree("WT",root)
 
 graph.write_png("hierarchy.png")
-# The abundances dictionary states the abundance of every strain in the population at every time plot. It is calculated
-# from the mutfreq dictionary above by subtracting from the frequency of every mutation the frequencies of all of its
-# sub-mutations (recursively), at each time point.
-abundances = {}
-for node in hierarchy:
-    abundances[node]=[]
 
-def set_abundances(node,t):
-    sz = 0
+# make sure each strain has abundance >= sum of decendent strains at every time point and print rounding performed.
+def adjust_node(node,t):
+    val = freq.loc[t,node]
     for son in hierarchy[node]:
-        son_size = set_abundances(son,t)
-        sz += son_size
-    my_size = max(freq.loc[t,node],sz)
-    if sz > freq.loc[t,node]: # If the data is contradictory, having a mutation the decendents of which exceeding its own frequency, print a report about it and the amount that it was rounded up by.
-        print "%s, at time %.1f, rounded %.2f" % (node,times[t],sz-freq.loc[t,node])
-    abundances[node].append(my_size-sz)
-    return my_size
+        adjust_node(son,t)
+    decendents_size = sum(freq.loc[t,hierarchy[node]])
+    if decendents_size > val:
+        print "adjusted %s at time %.1f by %.2f" % (node,t,decendents_size - val)
+    newval = max(val,decendents_size)
+    freq.loc[t,node] = newval
+    return newval
 
-for t in range(1,len(times)+1):            
-    set_abundances("WT",t)
-    if normalize: # normalize the sum of abundances of all the strains to unity, which is not always the case in real experimental data.
-        tot_size = 0
+for t in freq.index:
+    adjust_node('WT',t)
+
+# add time points for initiation of strains in cases where ancestor and decendent first arise in the same time point.
+freq.set_index('Time',drop=False,inplace=True)
+
+init_times = {'WT':0.0}
+
+def initial_read_time(node):
+    return min(freq.loc[freq[node] > 0,'Time'])    
+
+def set_initiation_time(node):
+    init_read_time = initial_read_time(node)
+    if node not in init_times:
+        init_time = max(freq.loc[freq['Time']<init_read_time,'Time'])
+        init_times[node] = init_time
+    init_time = init_times[node]
+    for son in hierarchy[node]:
+        if initial_read_time(son) == init_read_time:
+            init_times[son] = (init_time + init_read_time)/2
+            print "time added %f" % init_times[son]
+        set_initiation_time(son)
+
+set_initiation_time('WT')
+
+newtimes = sorted(set(init_times.values()))
+for i,t in enumerate(newtimes):
+    if t not in freq['Time'].values:
+        row = pd.DataFrame(index=[t])
+        row['Time'] = t
         for node in hierarchy:
-            tot_size += abundances[node][t]
-        scale = 1.0/tot_size
-        for node in hierarchy:
-            abundances[node][t] = abundances[node][t] * scale
-    
-sizes = {}  # Sizes stores, for each strain, the size each "slice" of it occupies at every time point (slice is a vertical
-            # portion of the graph that is colored in that strain's color. At a given time point a strain may have few 
-            # slices as they "wrap" every one of its decendent strains).
+            if init_times[node] >= t:
+                row[node] = 0.0
+            else:
+                start_time = max(freq.loc[freq['Time'] < t,'Time'])
+                end_time = min(freq.loc[freq['Time'] > t,'Time'])
+                start_val = freq.loc[start_time,node]
+                end_val = freq.loc[end_time,node]
+                time_frac = (t-start_time)/(end_time - start_time)
+                row[node] = start_val+time_frac*(end_val - start_val)
+        freq = freq.append(row)
 
-pointabdc = {}  # pointabdc stores, for each strain and every time point, the beginning and ending vertical coordinates
-                # of each of its slices.
+times = sorted(freq.index)
+freq.drop('Time',axis=1,inplace=True)
+freq.sort_index(inplace=True)
 
-#initialize the sizes dictionary
+pointbounds = {}  # pointbounds stores, for each strain and every time point, the beginning and ending vertical coordinates
+                # of its slice.
+
+#initialize the pointbounds dictionary
 for i in hierarchy:
-    decendents = len(hierarchy[i])
-    sizes[i] = []
-    for j in abundances[i]:
-        sizes[i].append(float(j)/(decendents+1))    # The width of every slice is the abundance of the strain divided 
-                                                    # by its number of decendents + 1 so enough slices exist to wrap all the decendents.
-    pointabdc[i] = []
+    pointbounds[i] = []
 
-# Two recursive functions needed to initialize the pointabdc dictionary:
-# calc_size calculates, given a strain and a time point, the fraction of the population that node and its decendents occupy (recursively).
-def calc_size(node,t):
-    nodesize = abundances[node][t]
-    for son in hierarchy[node]:
-        nodesize+=calc_size(son,t)
-    return nodesize
+def calc_bounds(node,t,offset):
+    size = freq.loc[t,node]
+    pointbounds[node].append((offset,offset+size))
+    sons = len(hierarchy[node])
+    sons_size = sum(freq.loc[t,hierarchy[node]])
+    interval = (size-sons_size)/(sons+1)
+    offset += interval
+    for i,son in enumerate(hierarchy[node]):
+        calc_bounds(son,t,offset)
+        offset+= interval + freq.loc[t,son]
 
-# calc_splits calculates the vertical beginning and ending point of each slice by interleaving them with the daughter strains of the given node (recursively).
-def calc_splits(node,t,offset):
-    slice_size = sizes[node][t] 
-    points = [offset,offset+slice_size] # first slice starts at the starting offset of the node and is slice_size tall (as are all the slices)
-    for son in hierarchy[node]:
-        calc_splits(son,t,points[-1])
-        sz = calc_size(son,t)
-        points.append(points[-1]+sz)    # the next slice starts after the daughter strain ends
-        points.append(points[-1]+slice_size) # and is again slice_size wide
-    pointabdc[node].append(points)
-    
-for t in range(len(times)):
-    calc_splits("WT",t,0) # For every time point recursively calculate the slices each strain occupies
+for t in times:
+    calc_bounds("WT",t,0) # For every time point recursively calculate the slices each strain occupies
 
 # Assign colors to the different strains
-colors = {"WT":"white",
-'0-xylE':(0.8,0.8,1.0),
-'0-topA':(0.6,0.6,0.8),
-'0-crp':(0.4,0.4,0.6),
-'0-yjiY':(0.2,0.2,0.5),
-'2-mlc+2':(0.0,0.4,0.5),
-'2-malE':(0.0,0.6,0.6),
-'2-thrA+2':(0.0,0.75,0.5),
-'2-prs+2':(0.0,1.0,0.5),
-'1-fliF':(0.35,0.0,0.5),
-'1-mlc+2':(0.5,0.0,0.5),
-'1-prs+7':(0.5,0.0,0.75),
-'1-cbdA':(0.75,0.0,0.75), 
-            'N-xylA*':"0.7",
-            'N-crp*':"0.5",
-            'N-rpoB*':(0.0,0.5,0.3),
-            'N-brnQ*':(0.0,0.85,0.4), 
-            'N-nadB*':(0.0,0.4,0.3),
-            'N-ptsI*':(0.0,0.4,0.2),
+colors = {"WT":["white","white"],
+'0-xylE':[(0.8,0.8,1.0),(0.8,0.8,1.0)],
+'0-topA':[(0.6,0.6,0.8),(0.6,0.6,0.8)],
+'0-crp':[(0.4,0.4,0.6),(0.4,0.4,0.6)],
+'0-yjiY':[(0.2,0.2,0.5),(0.2,0.2,0.5)],
+'2-mlc+2':[(0.0,0.4,0.5),(0.0,0.0,0.0)],
+'2-malE':[(0.0,0.6,0.6),(0.0,0.6,0.6)],
+'2-thrA+2':[(0.0,0.75,0.5),(0.0,0.75,0.5)],
+'2-prs+2':[(0.0,1.0,0.5),(0.0,1.0,0.5)],
+'1-fliF':[(0.35,0.0,0.5),(0.0,0.0,0.0)],
+'1-mlc+2':[(0.5,0.0,0.5),(0.5,0.0,0.5)],
+'1-prs+7':[(0.5,0.0,0.75),(0.5,0.0,0.75)],
+'1-cbdA':[(0.75,0.0,0.75),(0.75,0.0,0.75)], 
+            'N-xylA*':["0.7","0.7"],
+            'N-crp*':["0.5","0.5"],
+            'N-rpoB*':[(0.0,0.5,0.3),(0.0,0.5,0.3)],
+            'N-brnQ*':[(0.0,0.85,0.4),(0.0,0.85,0.4)], 
+            'N-nadB*':[(0.0,0.4,0.3),(0.0,0.4,0.3)],
+            'N-ptsI*':[(0.0,0.4,0.2),(0.0,0.4,0.2)],
             }
 nodes = ["WT", '0-xylE','N-xylA*', 'N-crp*','0-topA', '0-crp', '0-yjiY', '1-fliF','2-mlc+2', '2-malE', '2-thrA+2', '2-prs+2', 'N-rpoB*',# "2-rpoB-malE",
  '1-mlc+2',
@@ -136,36 +149,39 @@ handles = []
 labels = []
 
 # Loop through the strains and plot each one's slices.
-for node in nodes:
-    for i in range(len(pointabdc[node][0])/2): # Each slice is defined by two lines - the lower and upper bounds of the slice.
-        coords = {'time':[],'ymin':[],'ymax':[]}
-        tstart = None
-        for t in range(len(times)):
-            ptmin = pointabdc[node][t][2*i]
-            ptmax = pointabdc[node][t][2*i+1]
-                # For nicer visualization we omit slices of width 0 as they clutter the graph. We do need to include
-                # slices of width zero if they either preceed or succeed a time point with that slice being non zero,
-                # to show the emergence or decline of that strain.
-            if ptmax-ptmin>0.005:   #threshold to avoid rounding issues
-                if tstart is None:
-                    tstart = times[max(1,t)]
-                tend = times[min(t+2,len(times))]
-            coords["time"].append(times[t+1])
-            coords["ymin"].append(ptmin)
-            coords["ymax"].append(ptmax)
-        if smoothing: #Smoothing can be applied to make the plot more visually appealing but with spline it does not always produce the desired results
-            time = np.linspace(coords["time"][0],coords["time"][-1],100)
-            ymin = spline(coords["time"],coords["ymin"],time)
-            ymax = spline(coords["time"],coords["ymax"],time)
-        else:
-            time = np.array(coords['time'])
-            ymin = np.array(coords['ymin'])
-            ymax = np.array(coords['ymax'])
-        indices = (time>=tstart) & (time<=tend)
-        plt.fill_between(time[indices],ymin[indices],ymax[indices],color=colors[node],label=node)
+def plot_node(node):
+    coords = {'time':[],'ymin':[],'ymax':[]}
+    tstart = None
+    for t in range(len(times)):
+        (ptmin,ptmax) = pointbounds[node][t]
+            # For nicer visualization we omit slices of width 0 as they clutter the graph. We do need to include
+            # slices of width zero if they either preceed or succeed a time point with that slice being non zero,
+            # to show the emergence or decline of that strain.
+        if ptmax-ptmin>0.0005:   #threshold to avoid rounding issues
+            if tstart is None:
+                tstart = times[max(0,t-1)]
+            tend = times[min(t+1,len(times)-1)]
+        coords["time"].append(times[t])
+        coords["ymin"].append(ptmin)
+        coords["ymax"].append(ptmax)
+    if smoothing: #Smoothing can be applied to make the plot more visually appealing but with spline it does not always produce the desired results
+        time = np.linspace(coords["time"][0],coords["time"][-1],100)
+        ymin = spline(coords["time"],coords["ymin"],time)
+        ymax = spline(coords["time"],coords["ymax"],time)
+    else:
+        time = np.array(coords['time'])
+        ymin = np.array(coords['ymin'])
+        ymax = np.array(coords['ymax'])
+    indices = (time>=tstart) & (time<=tend)
+    plt.fill_between(time[indices],ymin[indices],ymax[indices],facecolor=colors[node][0],edgecolor = colors[node][1],label=node)
     # Take care of the legend.
-    handles.append(pch.Patch(facecolor = colors[node],edgecolor = "0.0",label = node))
+    handles.append(pch.Patch(facecolor = colors[node][0],edgecolor = "0.0",label = node))
     labels.append(node)
+    #overlay decendents
+    for son in hierarchy[node]:
+        plot_node(son)
+
+plot_node('WT')
 plt.set_ylim(0,1.1)
 plt.set_xlim(0,20.5)
 plt.tick_params(axis='both', which='major', labelsize=18)

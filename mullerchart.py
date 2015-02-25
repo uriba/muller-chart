@@ -16,7 +16,12 @@ smoothing = False                   #should the resulting plot lines be smoothed
 freq = read_csv(freq_file_name,header=None,index_col = 0)
 freq = freq.transpose()
 for col in freq.columns:
-    freq.loc[freq[col]<0.005,col] = 0.0
+    for i,row in enumerate(freq.index):
+        prev = 0 if i == 0 else freq.iloc[i-1][col]
+        following = 0 if i == len(freq.index)-1 else freq.iloc[i+1][col]
+        if 0 < freq.loc[row,col] < 0.005 and prev == 0 and following == 0:
+            print "rounded %s at time %d by %f" % (col,row,freq.loc[row,col])
+            freq.loc[row,col] = 0.0
 print freq
 # A dictionary stating for each strain its decendants. The order specified here determines the vertical order in which multiple decendants will be plotted. Earlier in the list = lower in the plot.
 with open(hierarchy_filename,'r') as f:
@@ -126,8 +131,7 @@ colors = {"WT":["white","white"],
 '2-thrA+2':[(0.0,0.75,0.5),(0.0,0.75,0.5)],
 '2-prs+2':[(0.0,1.0,0.5),(0.0,1.0,0.5)],
 '1-fliF':[(0.35,0.0,0.5),(0.0,0.0,0.0)],
-'1-mlc+2':[(0.5,0.0,0.5),(0.5,0.0,0.5)],
-'1-prs+7':[(0.5,0.0,0.75),(0.5,0.0,0.75)],
+'1-prs+10':[(0.5,0.0,0.75),(0.5,0.0,0.75)],
 '1-cbdA':[(0.75,0.0,0.75),(0.75,0.0,0.75)], 
             'N-xylA*':["0.7","0.7"],
             'N-crp*':["0.5","0.5"],
@@ -137,8 +141,7 @@ colors = {"WT":["white","white"],
             'N-ptsI*':[(0.0,0.4,0.2),(0.0,0.4,0.2)],
             }
 nodes = ["WT", '0-xylE','N-xylA*', 'N-crp*','0-topA', '0-crp', '0-yjiY', '1-fliF','2-mlc+2', '2-malE', '2-thrA+2', '2-prs+2', 'N-rpoB*',# "2-rpoB-malE",
- '1-mlc+2',
-'1-prs+7', '1-cbdA','N-brnQ*','N-nadB*','N-ptsI*']
+'1-prs+10', '1-cbdA','N-brnQ*','N-nadB*','N-ptsI*']
 
 fig = mpl.figure(figsize = (14,6))
 plt = fig.add_subplot(111)

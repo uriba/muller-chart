@@ -10,14 +10,13 @@ freq_file_name = "Muller_Data.csv"      #The file name where the frequencies of 
 hierarchy_filename = "Hierarchy.txt"    #The file that contains the strain hierarchy data in Python dictionary syntax with
                                         # keys being the strain names and values being a list of the daughter strains.
 
-normalize = False                   #should the total abundances be normalized to unity.
 smoothing = False                   #should the resulting plot lines be smoothed via spline.
 
 
 freq = read_csv(freq_file_name,header=None,index_col = 0)
 freq = freq.transpose()
 for col in freq.columns:
-    freq[col] = np.around(freq[col],2)
+    freq.loc[freq[col]<0.005,col] = 0.0
 
 # A dictionary stating for each strain its decendants. The order specified here determines the vertical order in which multiple decendants will be plotted. Earlier in the list = lower in the plot.
 with open(hierarchy_filename,'r') as f:

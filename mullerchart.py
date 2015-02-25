@@ -17,7 +17,7 @@ freq = read_csv(freq_file_name,header=None,index_col = 0)
 freq = freq.transpose()
 for col in freq.columns:
     freq.loc[freq[col]<0.005,col] = 0.0
-
+print freq
 # A dictionary stating for each strain its decendants. The order specified here determines the vertical order in which multiple decendants will be plotted. Earlier in the list = lower in the plot.
 with open(hierarchy_filename,'r') as f:
     hierarchy = eval(f.read())
@@ -42,8 +42,8 @@ def adjust_node(node,t):
     for son in hierarchy[node]:
         adjust_node(son,t)
     decendents_size = sum(freq.loc[t,hierarchy[node]])
-    if decendents_size > val:
-        print "adjusted %s at time %.1f by %.2f" % (node,t,decendents_size - val)
+    if decendents_size > val and val < 0.8:
+        print "adjusted %s at time \t %d from %.2f by %.2f" % (node,t,val,decendents_size - val)
     newval = max(val,decendents_size)
     freq.loc[t,node] = newval
     return newval

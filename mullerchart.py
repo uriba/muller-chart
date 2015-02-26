@@ -62,21 +62,31 @@ freq.set_index('Time',drop=False,inplace=True)
 init_times = {'WT':0.0}
 
 def initial_read_time(node):
-    return min(freq.loc[freq[node] > 0,'Time'])    
+    loc = min(freq.loc[freq[node] > 0,'Time'].index)
+    print [node,freq.loc[loc,node]]
+    return (loc,freq.loc[loc,node])
 
-def set_initiation_time(node):
-    init_read_time = initial_read_time(node)
-    if node not in init_times:
+def set_initiation_time(node,ans_size,ans_init,ans):
+    init_read_time,val = initial_read_time(node)
+    #if node not in init_times:
+    if node == 'WT':
+        init_time = 0.0
+    else:
         init_time = max(freq.loc[freq['Time']<init_read_time,'Time'])
-        init_times[node] = init_time
+    if ans_init < init_time:
+        ans_size = freq.loc[init_read_time,ans]
+    init_time = max(init_time,ans_init)
+    print [node,ans_size,val]
+    init_time = init_read_time - (init_read_time - init_time)*val/ans_size
+    init_times[node] = init_time
     init_time = init_times[node]
     for son in hierarchy[node]:
-        if initial_read_time(son) == init_read_time:
-            init_times[son] = (init_time + init_read_time)/2
-            print "time added %f" % init_times[son]
-        set_initiation_time(son)
+    #    if initial_read_time(son) == init_read_time:
+    #        init_times[son] = (init_time + init_read_time)/2
+    #        print "time added %f" % init_times[son]
+        set_initiation_time(son,val,init_time,node)
 
-set_initiation_time('WT')
+set_initiation_time('WT',1.0,0,None)
 
 newtimes = sorted(set(init_times.values()))
 for i,t in enumerate(newtimes):
@@ -127,28 +137,25 @@ colors = {"WT":["white","white"],
 '0-crp':[(0.4,0.4,0.6),(0.4,0.4,0.6)],
 '0-yjiY':[(0.2,0.2,0.5),(0.2,0.2,0.5)],
 '2-mlc+2':[(0.0,0.4,0.5),(0.0,0.0,0.0)],
-'2-malE':[(0.0,0.6,0.6),(0.0,0.6,0.6)],
 '2-thrA+2':[(0.0,0.75,0.5),(0.0,0.75,0.5)],
 '2-prs+2':[(0.0,1.0,0.5),(0.0,1.0,0.5)],
 '1-fliF':[(0.35,0.0,0.5),(0.0,0.0,0.0)],
 '1-prs+10':[(0.5,0.0,0.75),(0.5,0.0,0.75)],
 '1-cbdA':[(0.75,0.0,0.75),(0.75,0.0,0.75)], 
-            'N-xylA*':["0.7","0.7"],
+            'N-xylA-1':["0.7","0.7"],
+            'N-xylA-2':["0.7","0.7"],
             'N-crp*':["0.5","0.5"],
             'N-rpoB*':[(0.0,0.5,0.3),(0.0,0.5,0.3)],
             'N-brnQ*':[(0.0,0.85,0.4),(0.0,0.85,0.4)], 
             'N-nadB*':[(0.0,0.4,0.3),(0.0,0.4,0.3)],
             'N-ptsI*':[(0.0,0.4,0.2),(0.0,0.4,0.2)],
             }
-nodes = ["WT", '0-xylE','N-xylA*', 'N-crp*','0-topA', '0-crp', '0-yjiY', '1-fliF','2-mlc+2', '2-malE', '2-thrA+2', '2-prs+2', 'N-rpoB*',# "2-rpoB-malE",
+nodes = ["WT", '0-xylE','N-xylA-1', 'N-xylA-2', 'N-crp*','0-topA','0-crp', '0-yjiY', '1-fliF','2-mlc+2', '2-thrA+2', '2-prs+2', 'N-rpoB*',# "2-rpoB-malE",
 '1-prs+10', '1-cbdA','N-brnQ*','N-nadB*','N-ptsI*']
 
 fig = mpl.figure(figsize = (14,6))
 plt = fig.add_subplot(111)
 
-# These are needed for the legend
-handles = []
-labels = []
 
 # Loop through the strains and plot each one's slices.
 def plot_node(node):
@@ -176,10 +183,7 @@ def plot_node(node):
         ymax = np.array(coords['ymax'])
     indices = (time>=tstart) & (time<=tend)
     plt.fill_between(time[indices],ymin[indices],ymax[indices],facecolor=colors[node][0],edgecolor = colors[node][1],label=node)
-    # Take care of the legend.
-    handles.append(pch.Patch(facecolor = colors[node][0],edgecolor = "0.0",label = node))
-    labels.append(node)
-    #overlay decendents
+   #overlay decendents
     for son in hierarchy[node]:
         plot_node(son)
 
@@ -190,6 +194,12 @@ plt.tick_params(axis='both', which='major', labelsize=18)
 plt.tick_params(axis='both', which='minor', labelsize=18)
 plt.set_xlabel("time [weeks]", fontsize = 20)
 plt.set_ylabel("population fraction", fontsize = 20)
+# Take care of the legend.
+handles = []
+labels = []
+for node in nodes:
+    handles.append(pch.Patch(facecolor = colors[node][0],edgecolor = "0.0",label = node))
+    labels.append(node)
 mpl.figlegend(handles,labels,loc="right") 
 mpl.subplots_adjust(right=0.8)
 # And violla, our marvellous plot...        

@@ -62,31 +62,21 @@ freq.set_index('Time',drop=False,inplace=True)
 init_times = {'WT':0.0}
 
 def initial_read_time(node):
-    loc = min(freq.loc[freq[node] > 0,'Time'].index)
-    print [node,freq.loc[loc,node]]
-    return (loc,freq.loc[loc,node])
+    return (min(freq.loc[freq[node] > 0,'Time']))
 
-def set_initiation_time(node,ans_size,ans_init,ans):
-    init_read_time,val = initial_read_time(node)
-    #if node not in init_times:
-    if node == 'WT':
-        init_time = 0.0
-    else:
+def set_initiation_time(node):
+    init_read_time = initial_read_time(node)
+    if node not in init_times:
         init_time = max(freq.loc[freq['Time']<init_read_time,'Time'])
-    if ans_init < init_time:
-        ans_size = freq.loc[init_read_time,ans]
-    init_time = max(init_time,ans_init)
-    print [node,ans_size,val]
-    init_time = init_read_time - (init_read_time - init_time)*val/ans_size
-    init_times[node] = init_time
+        init_times[node] = init_time
     init_time = init_times[node]
     for son in hierarchy[node]:
-    #    if initial_read_time(son) == init_read_time:
-    #        init_times[son] = (init_time + init_read_time)/2
-    #        print "time added %f" % init_times[son]
-        set_initiation_time(son,val,init_time,node)
+        if initial_read_time(son) == init_read_time:
+            init_times[son] = (init_time + init_read_time)/2
+            print "time added %f" % init_times[son]
+        set_initiation_time(son)
 
-set_initiation_time('WT',1.0,0,None)
+set_initiation_time('WT')
 
 newtimes = sorted(set(init_times.values()))
 for i,t in enumerate(newtimes):

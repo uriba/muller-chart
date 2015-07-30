@@ -62,7 +62,7 @@ freq.set_index('Time',drop=False,inplace=True)
 init_times = {'WT':0.0}
 
 def initial_read_time(node):
-    return min(freq.loc[freq[node] > 0,'Time'])    
+    return (min(freq.loc[freq[node] > 0,'Time']))
 
 def set_initiation_time(node):
     init_read_time = initial_read_time(node)
@@ -127,13 +127,13 @@ colors = {"WT":["white","white"],
 '0-crp':[(0.4,0.4,0.6),(0.4,0.4,0.6)],
 '0-yjiY':[(0.2,0.2,0.5),(0.2,0.2,0.5)],
 '2-mlc+2':[(0.0,0.4,0.5),(0.0,0.0,0.0)],
-'2-malE':[(0.0,0.6,0.6),(0.0,0.6,0.6)],
 '2-thrA+2':[(0.0,0.75,0.5),(0.0,0.75,0.5)],
 '2-prs+2':[(0.0,1.0,0.5),(0.0,1.0,0.5)],
 '1-fliF':[(0.35,0.0,0.5),(0.0,0.0,0.0)],
 '1-prs+10':[(0.5,0.0,0.75),(0.5,0.0,0.75)],
 '1-cbdA':[(0.75,0.0,0.75),(0.75,0.0,0.75)], 
-            'N-xylA*':["0.7","0.7"],
+            'N-xylA-1':["0.7","0.7"],
+            'N-xylA-2':["0.7","0.7"],
             'N-crp*':["0.5","0.5"],
             'N-rpoB*':[(0.0,0.5,0.3),(0.0,0.5,0.3)],
             'N-brnQ*':[(0.0,0.85,0.4),(0.0,0.85,0.4)], 
@@ -150,9 +150,6 @@ nodes = colors.keys()
 fig = mpl.figure(figsize = (14,6))
 plt = fig.add_subplot(111)
 
-# These are needed for the legend
-handles = []
-labels = []
 
 # Loop through the strains and plot each one's slices.
 def plot_node(node):
@@ -196,6 +193,12 @@ plt.tick_params(axis='both', which='major', labelsize=18)
 plt.tick_params(axis='both', which='minor', labelsize=18)
 plt.set_xlabel("time [weeks]", fontsize = 20)
 plt.set_ylabel("population fraction", fontsize = 20)
+# Take care of the legend.
+handles = []
+labels = []
+for node in nodes:
+    handles.append(pch.Patch(facecolor = colors[node][0],edgecolor = "0.0",label = node))
+    labels.append(node)
 #mpl.figlegend(handles,labels,loc="right") 
 mpl.subplots_adjust(right=0.8)
 # And violla, our marvellous plot...        

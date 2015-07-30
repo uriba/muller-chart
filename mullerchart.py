@@ -6,8 +6,8 @@ import pandas as pd
 from pandas.io.parsers import read_csv
 import pydot
 
-freq_file_name = "Muller_Data.csv"      #The file name where the frequencies of the strains and timepoints are specified
-hierarchy_filename = "Hierarchy.txt"    #The file that contains the strain hierarchy data in Python dictionary syntax with
+freq_file_name = "new_muller.csv"      #The file name where the frequencies of the strains and timepoints are specified
+hierarchy_filename = "new_hierarchy.txt"    #The file that contains the strain hierarchy data in Python dictionary syntax with
                                         # keys being the strain names and values being a list of the daughter strains.
 
 smoothing = False                   #should the resulting plot lines be smoothed via spline.
@@ -140,8 +140,12 @@ colors = {"WT":["white","white"],
             'N-nadB*':[(0.0,0.4,0.3),(0.0,0.4,0.3)],
             'N-ptsI*':[(0.0,0.4,0.2),(0.0,0.4,0.2)],
             }
+with open("colors.txt",'r') as f:
+    colors = eval(f.read())
+
 nodes = ["WT", '0-xylE','N-xylA*', 'N-crp*','0-topA', '0-crp', '0-yjiY', '1-fliF','2-mlc+2', '2-malE', '2-thrA+2', '2-prs+2', 'N-rpoB*',# "2-rpoB-malE",
 '1-prs+10', '1-cbdA','N-brnQ*','N-nadB*','N-ptsI*']
+nodes = colors.keys()
 
 fig = mpl.figure(figsize = (14,6))
 plt = fig.add_subplot(111)
@@ -175,9 +179,11 @@ def plot_node(node):
         ymin = np.array(coords['ymin'])
         ymax = np.array(coords['ymax'])
     indices = (time>=tstart) & (time<=tend)
-    plt.fill_between(time[indices],ymin[indices],ymax[indices],facecolor=colors[node][0],edgecolor = colors[node][1],label=node)
+    #plt.fill_between(time[indices],ymin[indices],ymax[indices],facecolor=colors[node][0],edgecolor = colors[node][1],label=node)
+    plt.fill_between(time[indices],ymin[indices],ymax[indices],facecolor=colors[node],edgecolor = colors[node],label=node)
     # Take care of the legend.
-    handles.append(pch.Patch(facecolor = colors[node][0],edgecolor = "0.0",label = node))
+    #handles.append(pch.Patch(facecolor = colors[node][0],edgecolor = "0.0",label = node))
+    handles.append(pch.Patch(facecolor = colors[node],edgecolor = "0.0",label = node))
     labels.append(node)
     #overlay decendents
     for son in hierarchy[node]:
@@ -190,7 +196,7 @@ plt.tick_params(axis='both', which='major', labelsize=18)
 plt.tick_params(axis='both', which='minor', labelsize=18)
 plt.set_xlabel("time [weeks]", fontsize = 20)
 plt.set_ylabel("population fraction", fontsize = 20)
-mpl.figlegend(handles,labels,loc="right") 
+#mpl.figlegend(handles,labels,loc="right") 
 mpl.subplots_adjust(right=0.8)
 # And violla, our marvellous plot...        
 mpl.savefig("muller-chart.pdf")

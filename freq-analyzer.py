@@ -3,23 +3,18 @@ import pandas as pd
 from pandas.io.parsers import read_csv
 from itertools import combinations
 
-threshold = 0.05
+threshold = 0.05 #assumed measurement error.
+freq_file_name = "groups.csv"      #Filename containing the frequencies of the strains and timepoints.
 
-freq_file_name = "Muller_Data.csv"      #The file name where the frequencies of the strains and timepoints are specified
-
+#Read the file
 freq = read_csv(freq_file_name,header=None,index_col = 0)
 freq = freq.transpose()
-for col in freq.columns:
-    for i,row in enumerate(freq.index):
-        prev = 0 if i == 0 else freq.iloc[i-1][col]
-        following = 0 if i == len(freq.index)-1 else freq.iloc[i+1][col]
-        if 0 < freq.loc[row,col] < 0.005 and prev == 0 and following == 0:
-            print "rounded %s at time %d by %f" % (col,row,freq.loc[row,col])
-            freq.loc[row,col] = 0.0
 freq.index = freq["Time"]
 del(freq["Time"])
+freq = freq/100
 print freq
 
+#Iterate over all pairs of strains and determine their relation
 for (x,y) in combinations(freq.columns,2):
     maybeSiblings = not max(freq[x]+freq[y])>1+threshold
     if((freq[x] < freq[y] + threshold).all()):

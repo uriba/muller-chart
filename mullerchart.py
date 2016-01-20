@@ -6,7 +6,7 @@ import pandas as pd
 from pandas.io.parsers import read_csv
 import pydot
 
-freq_file_name = "new_muller.csv"      #The file name where the frequencies of the strains and timepoints are specified
+freq_file_name = "new_muller2.csv"      #The file name where the frequencies of the strains and timepoints are specified
 hierarchy_filename = "new_hierarchy.txt"    #The file that contains the strain hierarchy data in Python dictionary syntax with
                                         # keys being the strain names and values being a list of the daughter strains.
 
@@ -41,6 +41,11 @@ plot_tree("WT",root)
 
 graph.write_png("hierarchy.png")
 
+for col in freq.columns:
+    if col not in hierarchy and col != "Time":
+        del(freq[col])
+
+print(freq)
 # make sure each strain has abundance >= sum of decendent strains at every time point and print rounding performed.
 def adjust_node(node,t):
     val = freq.loc[t,node]
@@ -180,14 +185,14 @@ def plot_node(node):
     plt.fill_between(time[indices],ymin[indices],ymax[indices],facecolor=colors[node],edgecolor = colors[node],label=node)
     # Take care of the legend.
     #handles.append(pch.Patch(facecolor = colors[node][0],edgecolor = "0.0",label = node))
-    handles.append(pch.Patch(facecolor = colors[node],edgecolor = "0.0",label = node))
-    labels.append(node)
+    #handles.append(pch.Patch(facecolor = colors[node],edgecolor = "0.0",label = node))
+    #labels.append(node)
     #overlay decendents
     for son in hierarchy[node]:
         plot_node(son)
 
 plot_node('WT')
-plt.set_ylim(0,1.1)
+plt.set_ylim(0,2.5)
 plt.set_xlim(0,20.5)
 plt.tick_params(axis='both', which='major', labelsize=18)
 plt.tick_params(axis='both', which='minor', labelsize=18)
@@ -196,9 +201,9 @@ plt.set_ylabel("population fraction", fontsize = 20)
 # Take care of the legend.
 handles = []
 labels = []
-for node in nodes:
-    handles.append(pch.Patch(facecolor = colors[node][0],edgecolor = "0.0",label = node))
-    labels.append(node)
+#for node in nodes:
+    #handles.append(pch.Patch(facecolor = colors[node][0],edgecolor = "0.0",label = node))
+    #labels.append(node)
 #mpl.figlegend(handles,labels,loc="right") 
 mpl.subplots_adjust(right=0.8)
 # And violla, our marvellous plot...        
